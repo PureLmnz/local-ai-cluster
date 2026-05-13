@@ -77,13 +77,13 @@ import asyncio
 from openai import AsyncOpenAI
 
 # Initialize distinct network clients : (Using your own IP's and keys)
-mac_node = AsyncOpenAI(base_url="http://localhost:11434/v1", api_key="local-edge")
-windows_node = AsyncOpenAI(base_url="[http://100.](http://100.)x.y.z:1234/v1", api_key="remote-mesh")
+mac_node = AsyncOpenAI(base_url="http://localhost:11434/v1", api_key="local-edge") <-- Your own Key
+windows_node = AsyncOpenAI(base_url="[http://100.](http://100.)x.y.z:1234/v1", api_key="remote-mesh") <-- Your own IP and Key
 
 async def distributed_pipeline():
     # Task 1: Fast local routing/summarization
     local_task = mac_node.chat.completions.create(
-        model="llama3",
+        model="gemma4", <--Your model here
         messages=[{"role": "user", "content": "Classify this system event logic."}]
     )
     
@@ -112,7 +112,7 @@ To route native engineering agent workflows seamlessly through the remote comput
 {
   "api_base": "[http://100.](http://100.)x.y.z:1234/v1", <-- Your own IP 
   "api_key": "mesh-node",  <-- Your own Key
-  "model": "gemma4",
+  "model": "gemma4",  <-- Your model here
   "temperature": 0.6,
   "max_tokens": 8192,
   "global_settings": {
