@@ -1,3 +1,4 @@
+
 # Distributed Local AI Swarm Architecture
 
 [![Network: Tailscale](https://img.shields.io/badge/Network-Tailscale%20Mesh-blue?style=flat-square&logo=tailscale)](https://tailscale.com)
@@ -25,57 +26,53 @@ The system abstracts standard consumer hardware into a unified, parallel compute
 │ • Fast Edge Models (Llama 3)  │  (Encrypted)  │ • Gemma 4 / Qwen 3.5 (Q4_K_M)  │
 │ • OpenCode Runtime Harness    │               │ • Bound to 0.0.0.0:1234        │
 └───────────────────────────────┘               └────────────────────────────────┘
+```
 
+### Core Design Principles
+* **Zero-Latency Orchestration:** The client machine acts as an async router, handling context assembly and lightweight local models without hanging up local system threads.
+* **Specialist Offloading:** Resource-intensive GGUF weights are kept persistently loaded in dedicated GPU VRAM on the remote node for maximum time-to-first-token performance.
+* **Network Encapsulation:** All API payloads route through an encrypted Tailscale interface (`100.x.y.z`), eliminating the need to expose local ports to the public internet while bypassing standard NAT firewalls.
 
-Core Design Principles
+---
 
-Zero-Latency Orchestration: The client machine acts as an async router, handling context assembly and lightweight local models without hanging up local system threads.
+## 🧰 Hardware & Software Stack
 
-Specialist Offloading: Resource-intensive GGUF weights are kept persistently loaded in dedicated GPU VRAM on the remote node for maximum time-to-first-token performance.
+### Hardware Nodes
+* **Orchestrator Node:** Apple Silicon Mac (32GB Unified Memory)
+* **Compute Node:** Dedicated Windows Machine housing an **NVIDIA GeForce RTX 4070 (12GB VRAM)**
 
-Network Encapsulation: All API payloads route through an encrypted Tailscale interface (100.x.y.z), eliminating the need to expose local ports to the public internet while bypassing standard NAT firewalls.
+### Model Execution & Routing
+* **Server Backend:** [LM Studio](https://lmstudio.ai) configured as a headless inference server using the OpenAI REST API specification.
+* **Primary Specialist Weights:** `Gemma 4` and `Qwen 3.5 (9B)` — Quantized to `Q4_K_M` GGUF format to maximize context lengths within the 12GB VRAM ceiling.
+* **Local Runner:** Ollama executing highly compressed operational edge models.
+* **Agent Harness:** OpenCode configured via customized `opencode.json` routing schemas and operational behavior profiles (`AGENTS.md`).
 
-🧰 Hardware & Software Stack
-Hardware Nodes
+---
 
-Orchestrator Node: Apple Silicon Mac (32GB Unified Memory)
+## ⚙️ Network & Server Configuration
 
-Compute Node: Dedicated Windows Machine housing an NVIDIA GeForce RTX 4070 (12GB VRAM)
-
-Model Execution & Routing
-
-Server Backend: LM Studio configured as a headless inference server using the OpenAI REST API specification.
-
-Primary Specialist Weights: Gemma 4 and Qwen 3.5 (9B) — Quantized to Q4_K_M GGUF format to maximize context lengths within the 12GB VRAM ceiling.
-
-Local Runner: Ollama executing highly compressed operational edge models.
-
-Agent Harness: OpenCode configured via customized opencode.json routing schemas and operational behavior profiles (AGENTS.md).
-
-⚙️ Network & Server Configuration
 To replicate this environment, both nodes must be authenticated to the same Tailscale tailnet. The remote inference backend must be explicitly bound to the network interface.
 
-1. Binding the Inference Server
+### 1. Binding the Inference Server
+By default, local runners bind to loopback (`127.0.0.1`). To expose the server across the mesh network:
+* **LM Studio:** Navigate to the Local Server Configuration and set the listener host interface to `0.0.0.0` on port `1234`.
+* **Ollama (Alternative Backend):** Set the global system environment variable `OLLAMA_HOST=0.0.0.0` before service initialization.
 
-By default, local runners bind to loopback (127.0.0.1). To expose the server across the mesh network:
-
-LM Studio: Navigate to the Local Server Configuration and set the listener host interface to 0.0.0.0 on port 1234.
-
-Ollama (Alternative Backend): Set the global system environment variable OLLAMA_HOST=0.0.0.0 before service initialization.
-
-2. Firewall Rules
-
+### 2. Firewall Rules
 Ensure inbound TCP traffic targeting your chosen API port is permitted through the host OS firewall specifically for the Tailscale adapter interface:
-
+```powershell
 # Windows Defender Firewall rule execution for mesh routing
 New-NetFirewallRule -DisplayName "Tailscale Swarm Inbound" -Direction Inbound -LocalPort 1234 -Protocol TCP -Action Allow
+```
 
+---
 
-🚀 Usage & Integration
-Asynchronous Parallel Swarm Execution
+## 🚀 Usage & Integration
 
+### Asynchronous Parallel Swarm Execution
 This pattern allows the local machine to query edge models while simultaneously executing heavy tasks on the remote GPU.
 
+```python
 import asyncio
 from openai import AsyncOpenAI
 
@@ -106,11 +103,12 @@ async def distributed_pipeline():
 
 if __name__ == "__main__":
     asyncio.run(distributed_pipeline())
+```
 
+### OpenCode Harness Integration
+To route native engineering agent workflows seamlessly through the remote compute node, configure the target client profile inside `opencode.json`:
 
-OpenCode Harness Integration
-
-To route native engineering agent workflows seamlessly through the remote compute node, configure the target client profile inside opencode.json:
+```json
 {
   "api_base": "[http://100.](http://100.)x.y.z:1234/v1",
   "api_key": "mesh-node",
@@ -121,13 +119,17 @@ To route native engineering agent workflows seamlessly through the remote comput
     "stream": true
   }
 }
+```
 
-📊 Performance & Optimization Notes
-VRAM Saturation: Selecting Q4_K_M quantizations keeps active memory usage for a 9B parameter model strictly bounded to ~6GB. This leaves optimal buffer capacity for extended context windows (up to 32k tokens) during heavy source-code analysis tasks without spilling over into shared system memory.
+---
 
-Deterministic Configuration: When targeting reasoning models via headless routing, global prompts enforce strict markdown block structure outputs while disabling unnecessary conversational fluff to optimize downstream script parsing.
+## 📊 Performance & Optimization Notes
 
-Sampling Settings for Code Tasks: For deterministic output logic over remote endpoints, temperature is clamped to 0.60 with top_p configured to 0.95.
+* **VRAM Saturation:** Selecting `Q4_K_M` quantizations keeps active memory usage for a 9B parameter model strictly bounded to ~6GB. This leaves optimal buffer capacity for extended context windows (up to 32k tokens) during heavy source-code analysis tasks without spilling over into shared system memory.
+* **Deterministic Configuration:** When targeting reasoning models via headless routing, global prompts enforce strict markdown block structure outputs while disabling unnecessary conversational fluff to optimize downstream script parsing.
+* **Sampling Settings for Code Tasks:** For deterministic output logic over remote endpoints, temperature is clamped to `0.60` with `top_p` configured to `0.95`.
 
-📜 License
-Distributed under the MIT License. See LICENSE for more information.
+---
+
+## 📜 License
+Distributed under the MIT License. See `LICENSE` for more information.
