@@ -76,7 +76,7 @@ This pattern allows the local machine to query edge models while simultaneously 
 import asyncio
 from openai import AsyncOpenAI
 
-# Initialize distinct network clients
+# Initialize distinct network clients : (Using your own IP's and keys)
 mac_node = AsyncOpenAI(base_url="http://localhost:11434/v1", api_key="local-edge")
 windows_node = AsyncOpenAI(base_url="[http://100.](http://100.)x.y.z:1234/v1", api_key="remote-mesh")
 
@@ -110,8 +110,8 @@ To route native engineering agent workflows seamlessly through the remote comput
 
 ```json
 {
-  "api_base": "[http://100.](http://100.)x.y.z:1234/v1",
-  "api_key": "mesh-node",
+  "api_base": "[http://100.](http://100.)x.y.z:1234/v1", <-- Your own IP 
+  "api_key": "mesh-node",  <-- Your own Key
   "model": "gemma4",
   "temperature": 0.6,
   "max_tokens": 8192,
